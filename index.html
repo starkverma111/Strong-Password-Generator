@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Password Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3"></script>
+    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.css" rel="stylesheet" />
+    <link href="https://fonts.cdnfonts.com/css/google-sans" rel="stylesheet">
+    <style>
+      * {
+        font-family: 'Product Sans', sans-serif !important;
+      }
+      img {
+        height: 1800px;
+        width: 800px;
+      }
+    </style>
+  </head>
+  <body class="subpixel-antialiased bg-stone-100 h-screen">
+    <div id="app" class="bg-white container-lg rounded-3xl shadow max-w-6xl mx-auto flex justify-center mt-16 p-8 overflow-hidden">
+      <div class="grid grid-cols md:grid-cols-2 lg:grid-cols-2 gap-4 ">
+        <div class="p-0 self-center">
+          <img src="./img/oop.png" class="drop-shadow-sm object-cover" />
+        </div>
+        <div class="z-10 p-4 rounded-2xl border-zinc-200  px-8 bg-white shadow-sm">
+          <h1 class="text-gray-900 text-4xl text-center leading-relaxed mt-6">Strong Password Generator</h1>
+          <div class="my-6 flex items-center space-x-4">
+            <input
+              type="text"
+              id="password"
+              v-model="password"
+              readonly
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full p-2.5"
+            >
+            <button
+              @click="copyToClipboard"
+              class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+              Copy
+            </button>
+          </div>
+          <div class="flex justify-center">
+            <button
+              @click="generatePassword"
+              class="mt-2 rounded-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium text-sm px-5 py-2.5"
+            >
+              Generate Password
+            </button>
+          </div>
+          <h3 class="mb-4 font-bold text-gray-800 text-lg mt-8 ms-2">Select options for your password:</h3>
+          <ul class="w-full text-sm font-medium text-gray-900 rounded-lg">
+            <div class="ms-2 my-4">
+              <label for="password-length" class="block text-lg font-medium text-gray-900 tracking-wide">Password Length</label>
+              <div class="flex items-center space-x-4">
+                <input 
+                  id="password-length" 
+                  type="range" 
+                  v-model="passwordLength" 
+                  min="8" 
+                  max="50" 
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                >
+                <span class="text-xl font-medium text-gray-900 border p-2 rounded-xl px-3">{{ passwordLength }}</span>
+              </div>
+            </div>
+            <li v-for="(status, key) in checks" :key="key" class="w-full border-b border-gray-200 rounded-t-lg">
+              <div class="flex items-center ps-3">
+                <input
+                  type="checkbox"
+                  :id="key"
+                  v-model="checks[key]"
+                  class="w-4 h-4 rounded-sm text-green-500 bg-gray-100 border-gray-300 focus:ring-blue-500"
+                >
+                <label :for="key" class="w-full py-3 ms-2 text-lg font-medium tracking-wide">{{ descriptions[key] }}</label>
+              </div>
+            </li>
+          </ul>
+          <div class="text-lg text-center mb-4 mt-6 text-gray-700 my-1"> Strength: 
+            <span :style="{ color: feedbackColor }">{{ strength }}</span>
+          </div>
+          <div id="time-to-crack" class="text-center text-lg text-gray-600 py-1">
+            Time to crack: {{ timeToCrack }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const app = Vue.createApp({
+        data() {
+          return {
+            password: '',
+            checks: {
+              lowercase: true,
+              uppercase: false,
+              numbers: false,
+              special: false,
+            },
+            descriptions: {
+              lowercase: 'Lowercase letters (a-z)',
+              uppercase: 'Uppercase letters (A-Z)',
+              numbers: 'Numbers (0-9)',
+              special: 'Special characters (!@#$%^&*, etc.)',
+            },
+            strength: '',
+            feedbackColor: 'black',
+            timeToCrack: '',
+            passwordLength: 12, // Default length
+          };
+        },
+        methods: {
+          generatePassword() {
+            const length = this.passwordLength; // Use the slider value
+            let charset = '';
+            if (this.checks.lowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+            if (this.checks.uppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            if (this.checks.numbers) charset += '0123456789';
+            if (this.checks.special) charset += '!@#$%^&*()_+[]{}<>?';
+
+            if (!charset) {
+              alert('Please select at least one option.');
+              return;
+            }
+
+            this.password = Array.from({ length }, () => charset[Math.floor(Math.random() * charset.length)]).join('');
+            this.evaluatePassword();
+          },
+          evaluatePassword() {
+            const password = this.password;
+
+            if (!password) {
+              this.strength = '';
+              this.feedbackColor = 'black';
+              this.timeToCrack = '';
+              return;
+            }
+
+            const entropy = this.calculateEntropy(password);
+
+            if (entropy < 28) {
+              this.strength = 'Weak';
+              this.feedbackColor = 'red';
+            } else if (entropy < 36) {
+              this.strength = 'Fair';
+              this.feedbackColor = 'orange';
+            } else if (entropy < 60) {
+              this.strength = 'Strong';
+              this.feedbackColor = 'blue';
+            } else {
+              this.strength = 'Very Strong';
+              this.feedbackColor = 'green';
+            }
+
+            const guessesPerSecond = 1e9; // 1 billion guesses per second
+            const totalGuesses = Math.pow(2, entropy);
+            const secondsToCrack = totalGuesses / guessesPerSecond;
+            this.timeToCrack = this.formatTimeToCrack(secondsToCrack);
+          },
+          calculateEntropy(password) {
+            const length = password.length;
+            let charSetSize = 0;
+            if (/[a-z]/.test(password)) charSetSize += 26;
+            if (/[A-Z]/.test(password)) charSetSize += 26;
+            if (/[0-9]/.test(password)) charSetSize += 10;
+            if (/[^a-zA-Z0-9]/.test(password)) charSetSize += 32;
+            return length * Math.log2(charSetSize);
+          },
+          formatTimeToCrack(seconds) {
+            const days = seconds / (60 * 60 * 24);
+            const years = Math.floor(days / 365.25);
+            const months = Math.floor((days % 365.25) / 30.44);
+            const remainingDays = Math.floor(days % 365.25 % 30.44);
+            return `${years} years / ${months} months / ${remainingDays} days`;
+          },
+          copyToClipboard() {
+            navigator.clipboard.writeText(this.password).then(() => {
+              alert('Password copied to clipboard!');
+            });
+          },
+        },
+      });
+
+      app.mount('#app');
+    </script>
+  </body>
+</html>
